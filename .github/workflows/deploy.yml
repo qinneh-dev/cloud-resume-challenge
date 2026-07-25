@@ -7,12 +7,12 @@ on:
   pull_request:
     branches: [ main ]
 
-# geo-fence
+# geo-fence data sovereignty
 env:
   AWS_DEFAULT_REGION: eu-central-1
 
 jobs:
-  # security gate
+  # security scan 
   security:
     runs-on: self-hosted
     steps:
@@ -35,12 +35,12 @@ jobs:
       - name: Setup python
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3-pip
-          pip install --upgrade pip pytest boto3 moto
+          sudo apt-get install -y python3-pip python3-pytest python3-boto3
+          pip install --upgrade pip pytest boto3 moto --break-system-packages
 
       - name: Run pytest
         run: |
-          pytest backend/lambda_test.py
+          python3 -m pytest backend/lambda_test.py
 
   # deploy stage
   deploy:
