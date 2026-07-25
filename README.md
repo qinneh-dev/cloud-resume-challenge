@@ -19,7 +19,11 @@ This repository shows how a static frontend, a Lambda-based visitor counter, and
 
 ![Cloud Resume Challenge AWS architecture](./diagrams/architecture%20diagram.png)
 
-The canonical editable source for the diagram still lives in [diagrams/cloud-resume-challenge-architecture.drawio](diagrams/cloud-resume-challenge-architecture.drawio). The PNG above is the rendered version for the README, while the draw.io file stays available if you want to refine or re-export it later.
+## Grafana Dashboard Snapshot
+
+The dashboard below is a static snapshot from the K3s monitoring host. It is safer to publish than the live endpoint and still shows the operational character of the monitoring plane.
+
+![Grafana dashboard snapshot](./website/assets/grafana%20dashboard.png)
 
 ## Architecture Notes
 
@@ -46,6 +50,7 @@ cloud-resume-challenge/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml                 # Self-hosted DevSecOps pipeline
+├── README.md                          # Primary project documentation
 ├── ansible/
 │   ├── inventory.ini                  # EC2 runner inventory
 │   └── setup-runner.yml               # Runner bootstrap playbook
@@ -53,6 +58,7 @@ cloud-resume-challenge/
 │   ├── lambda_function.py             # Visitor counter Lambda handler
 │   └── lambda_test.py                 # Pytest + Moto coverage
 ├── diagrams/
+│   ├── architecture diagram.png       # Rendered AWS architecture diagram for the README
 │   └── cloud-resume-challenge-architecture.drawio  # Editable AWS architecture diagram
 ├── infrastructure/
 │   ├── acm.tf                         # ACM certificate for CloudFront
@@ -100,6 +106,30 @@ This layout is intentional: automation, application code, infrastructure, and mo
 | Testing | Pytest, Moto |
 | Security and linting | Checkov |
 | Cloud region usage | `eu-central-1` for primary infrastructure, `us-east-1` for ACM |
+
+## Cost Analysis
+
+This project can be explained as $0 for the core challenge path when you keep the always-on footprint to the serverless layer and treat the runner and monitoring host as optional lab infrastructure. The table below separates the services that can stay at zero from the parts that create a real AWS bill if you leave them running.
+
+| Component | Typical monthly cost | Why it can be $0 |
+| --- | --- | --- |
+| Amazon S3 | $0 at challenge scale | Static assets are tiny and storage/requests stay negligible for a resume site. |
+| Amazon CloudFront | $0 at challenge scale | Low traffic and a single static distribution keep usage extremely small. |
+| AWS Certificate Manager | $0 | Public certificates for CloudFront are free. |
+| Amazon API Gateway HTTP API | $0 at challenge scale | The visitor counter generates very few requests. |
+| AWS Lambda | $0 at challenge scale | Short, low-volume invocations stay inside free-tier style usage. |
+| Amazon DynamoDB | $0 at challenge scale | The counter uses a single item with tiny read/write demand. |
+| GitHub Actions | $0 | The workflow runs on GitHub, and the compute is provided by the repo workflow rather than an AWS bill. |
+| Ansible, Terraform, Checkov, Pytest, Moto | $0 | These are local tooling and software costs, not metered cloud services. |
+| Amazon Route 53 hosted zone | $0.50/month | This is the first real fixed AWS cost. If you want a strict $0 baseline, skip the hosted zone and use the CloudFront domain for demos. |
+| EC2 self-hosted runner | Varies | This is only $0 if the instance is stopped or replaced with temporary capacity; otherwise it is a recurring compute cost. |
+| EC2 observability host | Varies | Same as the runner: it is cost-free only when it is not running continuously. |
+
+### Why the core stack can be $0
+
+The zero-cost claim applies to the core serverless path: S3, CloudFront, ACM, API Gateway, Lambda, and DynamoDB. Those services are intentionally lightweight here and only process a tiny amount of traffic, so the challenge itself can be presented as a $0 AWS service model if you exclude the optional always-on lab hosts and, for a strict interpretation, the Route 53 hosted zone.
+
+In practice, the repo also includes a self-hosted runner and a monitoring host on EC2, which are great for demonstrating a real DevOps workflow but are the parts that introduce a bill. So the clean way to describe the project is: the public resume application is effectively $0-scale, while the lab and observability layer are optional costs outside the core challenge footprint.
 
 ## How It Fits Together
 
@@ -168,12 +198,6 @@ This repository is not formally certified against any standard. Instead, it is i
 From a data-sovereignty perspective, this project is designed to keep the data surface area as small as possible: it collects no user profiles, no logins, no payment data, and no long-lived personal identifiers. The only persistent application data is the aggregate resume visit counter.
 
 ## Grafana Dashboard Snapshot
-
-The dashboard below is a static snapshot from the K3s monitoring host. It is safer to publish than the live endpoint and still shows the operational character of the monitoring plane.
-
-![Grafana dashboard snapshot](./website/assets/grafana%20dashboard.png)
-
-If you want a true AWS-style diagram with service icons and more polished arrow routing, the clean path is to build it in draw.io or diagrams.net, use the AWS icon library, and export it as SVG or PNG for the README. GitHub Markdown does not support native diagram animation, so if you want motion you would need to embed an animated GIF or WebP preview instead.
 
 ## Author
 
