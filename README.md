@@ -17,7 +17,9 @@ This repository shows how a static frontend, a Lambda-based visitor counter, and
 
 ## Architecture Diagram
 
-The canonical architecture diagram now lives in the editable draw.io source file at [diagrams/cloud-resume-challenge-architecture.drawio](diagrams/cloud-resume-challenge-architecture.drawio). It uses AWS service icons, orthogonal arrows, and grouped boundaries so you can export a crisp PNG or SVG from diagrams.net when you want a rendered preview in the README.
+![Cloud Resume Challenge AWS architecture](./diagrams/architecture%20diagram.png)
+
+The canonical editable source for the diagram still lives in [diagrams/cloud-resume-challenge-architecture.drawio](diagrams/cloud-resume-challenge-architecture.drawio). The PNG above is the rendered version for the README, while the draw.io file stays available if you want to refine or re-export it later.
 
 ## Architecture Notes
 
