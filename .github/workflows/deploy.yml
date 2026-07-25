@@ -43,7 +43,7 @@ jobs:
       - name: Checkov scan
         continue-on-error: true
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/infrastructure:/tf bridgecrew/checkov -d /tf --skip-path .terraform --quiet --compact
+          checkov -d infrastructure --framework terraform --skip-path .terraform --compact
 
   testing:
     runs-on: self-hosted
@@ -52,9 +52,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run pytest in python container
+      - name: Run pytest
         run: |
-          docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/workspace -w /workspace python:3.10-slim bash -c "pip install --quiet pytest boto3 moto && python3 -m pytest backend/lambda_test.py"
+          python3 -m pytest backend/lambda_test.py
 
   deploy:
     runs-on: self-hosted
@@ -67,27 +67,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Terraform apply in container
+      - name: Terraform apply
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/infrastructure \
-            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
-            hashicorp/terraform:latest init
-            
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/infrastructure \
-            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
-            hashicorp/terraform:latest apply -auto-approve
+          cd infrastructure
+          terraform init
+          terraform apply -auto-approve
 
-      - name: Sync s3 via aws cli container
+      - name: Sync S3
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/website \
-            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
-            amazon/aws-cli s3 sync . s3://omaralqinneh-resume-bucket-eu --delete --exclude "terraform/*"
+          aws s3 sync website/ s3://omaralqinneh-resume-bucket-eu --delete --exclude "terraform/*"
 
-      - name: Flush cloudfront cache
+      - name: Flush CloudFront cache
         run: |
-          docker run --rm --user $(id -u):$(id -g) \
-            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
-            amazon/aws-cli cloudfront create-invalidation --distribution-id E14AHE1AA4NA05 --paths "/*"
+          aws cloudfront create-invalidation --distribution-id E14AHE1AA4NA05 --paths "/*"
 
   restore-monitoring:
     runs-on: self-hosted
