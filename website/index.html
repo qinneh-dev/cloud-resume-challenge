@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omar Al-Qinneh | Cloud Engineering & Solutions Architecture</title>
+  
+  <meta name="description" content="Portfolio of Omar Al-Qinneh - Computer Engineering student specializing in Cloud Infrastructure, DevOps automation, and AWS Well-Architected systems.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <div class="page-shell">
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="resume-card" id="main-content">
+      
+      <!-- Profile Header -->
+      <header class="hero">
+        <div class="hero-top">
+          <img class="avatar" src="assets/pfp.png" alt="Omar Al-Qinneh">
+
+          <div class="hero-copy">
+            <h1>Omar Al-Qinneh</h1>
+            <p class="headline">Cloud Engineer &amp; Aspiring Solutions Architect</p>
+            <p class="subheadline">
+              B.S. Computer Engineering — Princess Sumaya University for Technology (Expected Graduation: June 2029)
+            </p>
+          </div>
+        </div>
+
+        <p class="lead-summary">
+          Computer Engineering student specializing in cloud infrastructure design, DevOps automation, and systems architecture. Focused on evaluating technical trade-offs, optimizing cloud spend (FinOps), and building secure, high-availability environments aligned with the AWS Well-Architected Framework using Terraform, Docker, and Linux.
+        </p>
+
+        <ul class="meta-row">
+          <li class="meta-item">
+            <strong class="meta-label">Focus</strong>
+            <span class="meta-value">Solutions Architecture &amp; DevOps</span>
+          </li>
+          <li class="meta-item">
+            <strong class="meta-label">Location</strong>
+            <span class="meta-value">Amman, Jordan</span>
+          </li>
+          <li class="meta-item">
+            <strong class="meta-label">Languages</strong>
+            <span class="meta-value">Arabic &amp; English</span>
+          </li>
+        </ul>
+      </header>
+
+      <!-- Main Content Grid -->
+      <section class="content-grid">
+        
+        <!-- Skills -->
+        <section class="section-block">
+          <h2>Skills &amp; Competencies</h2>
+          <div class="skills-grid">
+            <div class="skill-group">
+              <strong class="group-title">Solutions Architecture &amp; Strategy</strong>
+              <p class="group-items">AWS Well-Architected Framework, Cost Optimization (FinOps), Zero-Trust Security, High Availability, Disaster Recovery, System Design</p>
+            </div>
+            <div class="skill-group">
+              <strong class="group-title">Cloud &amp; DevOps Engineering</strong>
+              <p class="group-items">AWS, Terraform (IaC), Docker, Kubernetes (K3s), Ansible, Linux, GitHub Actions (CI/CD), Prometheus, Grafana</p>
+            </div>
+            <div class="skill-group">
+              <strong class="group-title">Languages &amp; Automation</strong>
+              <p class="group-items">Python, C++, Bash, YAML, Git, Pytest, REST &amp; HTTP APIs, SQL &amp; NoSQL (DynamoDB)</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Certifications -->
+        <section class="section-block">
+          <h2>Certifications</h2>
+          <ul class="cert-list">
+            <li>
+              <strong>AWS Certified Cloud Practitioner</strong>
+              <span>Amazon Web Services</span>
+            </li>
+            <li>
+              <strong>Red Hat System Administration I (RH124)</strong>
+              <span>Red Hat</span>
+            </li>
+            <li>
+              <strong>IELTS Academic (Band 8.0)</strong>
+              <span>British Council</span>
+            </li>
+            <li>
+              <strong>Artificial Intelligence Fundamentals</strong>
+              <span>Udacity</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Featured Projects -->
+        <section class="section-block section-block-wide">
+          <h2>Architectural Projects</h2>
+          <div class="project-list">
+            
+            <!-- Cloud Resume Challenge -->
+            <article>
+              <h3>The Cloud Resume Challenge <span class="project-tag">Active</span></h3>
+              <p class="body-text">
+                A full-stack, multi-region web application and automated DevSecOps pipeline architected from the ground up to run 100% within the AWS Free Tier ($0/month operational footprint), demonstrating cost-conscious cloud-native infrastructure design.
+              </p>
+              
+              <ul class="project-highlights">
+                <li><strong>Serverless &amp; Zero-Cost Backend:</strong> Routed traffic via an AWS HTTP API Gateway to a Python 3.10 Lambda function running on ARM64 Graviton2 compute, utilizing atomic DynamoDB expressions to handle high-concurrency visitor counting without incurring database read/write capacity charges.</li>
+                <li><strong>IaC &amp; Zero-Trust Edge:</strong> Provisioned all multi-region AWS infrastructure declaratively using Terraform. Sealed the static S3 frontend against public internet exposure, serving traffic securely through an Amazon CloudFront distribution with Origin Access Control (OAC).</li>
+                <li><strong>CI/CD &amp; Orchestration:</strong> Automated continuous deployments via GitHub Actions using a self-hosted EC2 runner configured automatically with Ansible playbooks within Free Tier compute limits. Backend services are containerized with Docker and orchestrated locally using K3s Kubernetes manifests.</li>
+              </ul>
+            </article>
+
+            <!-- Krooka Prototype -->
+            <article>
+              <h3>Krooka <span class="project-tag">Prototype</span></h3>
+              <p class="body-text">
+                Developed for the Crown Prince Award as an architectural prototype for a localized civic traffic accident reporting platform similar to regional automated systems. Engineered the core workflow integrating third-party geolocation tracking APIs, real-time ETA calculations, and decoupled backend state management.
+              </p>
+            </article>
+
+            <!-- SimMate Prototype  -->
+            <article>
+              <h3>SimMate <span class="project-tag">Prototype</span></h3>
+              <p class="body-text">
+                A custom Microsoft Flight Simulator (MSFS) hardware and interface addon engineered specifically for the Fenix A320. Built using Flutter and C++ with the MSFS SDK to replace physical overhead, MCDU, autopilot (AP), radio, and transponder (XPDR) panels by processing low-level avionic data streams and real-time event accumulators.
+              </p>
+            </article>
+            
+          </div>
+        </section>
+
+        <!-- Leadership -->
+        <section class="section-block">
+          <h2>Leadership &amp; Community</h2>
+          <p class="body-text">
+            Focused on technical leadership and student empowerment, applying for community roles including AWS Student Builder Group Leader and GitHub Campus Expert to mentor peers in cloud infrastructure and modern software design.
+          </p>
+        </section>
+
+        <!-- Links -->
+        <section class="section-block">
+          <h2>Links</h2>
+          <div class="link-row">
+            <a href="https://www.linkedin.com/in/omar-alqinneh/" target="_blank" rel="noreferrer">LinkedIn</a>
+            <a href="https://github.com/qinneh-dev" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="mailto:qinneh.dev@gmail.com">Email</a>
+          </div>
+        </section>
+
+      </section>
+
+      <!--  Centered Footer -->
+      <footer class="site-footer">
+        <div class="counter-badge">
+          <span class="status-dot"></span>
+          <span class="counter-label">Live System Views:</span>
+          <span id="visitor-count" class="counter-number">--</span>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+</body>
+</html>

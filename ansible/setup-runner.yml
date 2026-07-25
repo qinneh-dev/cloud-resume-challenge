@@ -1,0 +1,81 @@
+---
+- name: Configure EC2 GitHub Actions Runner & Docker Host
+  hosts: runner
+  become: true # Runs commands as root (sudo)
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install essential packages (Git, Curl, Unzip)
+      apt:
+        name:
+          - git
+          - curl
+          - unzip
+          - apt-transport-https
+          - ca-certificates
+        state: present
+
+    - name: Install Docker and Docker Compose
+      apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+
+    - name: Enable and start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add 'ubuntu' user to the docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Check if 2GB swap file exists
+      stat:
+        path: /swapfile
+      register: swap_file_check
+
+    - name: Create 2GB swap file for memory stability
+      command: fallocate -l 2G /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Set secure permissions on swap file
+      file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+      when: not swap_file_check.stat.exists
+
+    - name: Format swap file
+      command: mkswap /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Enable swap file
+      command: swapon /swapfile
+      when: not swap_file_check.stat.exists
+
+    - name: Persist swap in /etc/fstab
+      mount:
+        name: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        passno: 0
+        dump: 0
+        state: present
+
+    - name: Create directory for GitHub Actions runner
+      file:
+        path: /home/ubuntu/actions-runner
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"  

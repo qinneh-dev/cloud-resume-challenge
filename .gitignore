@@ -1,0 +1,17 @@
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+**/.terraform/
+*.pem
+*.key
+*.zip
+lambda_function.zip
+__pycache__/
+*.pyc
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+DS_Store
+.vscode/
+*.swp
