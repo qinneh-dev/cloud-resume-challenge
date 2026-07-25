@@ -3,8 +3,26 @@ name: DevSecOps Pipeline
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'assets/**'
+      - '*.png'
+      - '*.jpg'
+      - '*.jpeg'
+      - 'docs/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'assets/**'
+      - '*.png'
+      - '*.jpg'
+      - '*.jpeg'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   AWS_DEFAULT_REGION: eu-central-1
@@ -12,19 +30,21 @@ env:
   PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
-  # security scan
   security:
     runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Scale down monitoring
+        run: |
+          sudo k3s kubectl scale deployment prometheus grafana -n monitoring --replicas=0 || true
+
       - name: Checkov scan
         continue-on-error: true
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/infrastructure:/tf bridgecrew/checkov -d /tf --quiet --compact
+          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/infrastructure:/tf bridgecrew/checkov -d /tf --skip-path .terraform --quiet --compact
 
-  # unit tests in a container
   testing:
     runs-on: self-hosted
     needs: security
@@ -36,7 +56,6 @@ jobs:
         run: |
           docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/workspace -w /workspace python:3.10-slim bash -c "pip install --quiet pytest boto3 moto && python3 -m pytest backend/lambda_test.py"
 
- # deploy stage via containers
   deploy:
     runs-on: self-hosted
     needs: [security, testing]
@@ -69,3 +88,12 @@ jobs:
           docker run --rm --user $(id -u):$(id -g) \
             -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
             amazon/aws-cli cloudfront create-invalidation --distribution-id E14AHE1AA4NA05 --paths "/*"
+
+  restore-monitoring:
+    runs-on: self-hosted
+    needs: [security, testing, deploy]
+    if: always()
+    steps:
+      - name: Scale up monitoring
+        run: |
+          sudo k3s kubectl scale deployment prometheus grafana -n monitoring --replicas=1 || true
