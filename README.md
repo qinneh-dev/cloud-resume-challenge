@@ -1,5 +1,5 @@
 # Cloud Resume Challenge
-
+omaralqinneh.me
 Serverless resume platform, DevSecOps pipeline, and observability lab built as a practical cloud architecture portfolio piece.
 
 This repository shows how a static frontend, a Lambda-based visitor counter, and a lightweight Kubernetes monitoring stack can be stitched together into a single, production-shaped system. The goal is not just to ship a working Cloud Resume Challenge implementation, but to demonstrate the thinking of a DevOps engineer who is deliberately moving toward solutions architecture: strong separation of concerns, low operational overhead, security-first edge design, and an IaC-first delivery model.
