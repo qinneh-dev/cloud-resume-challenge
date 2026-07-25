@@ -5,14 +5,14 @@ Serverless resume platform, DevSecOps pipeline, and observability lab built as a
 This repository shows how a static frontend, a Lambda-based visitor counter, and a lightweight Kubernetes monitoring stack can be stitched together into a single, production-shaped system. The goal is not just to ship a working Cloud Resume Challenge implementation, but to demonstrate the thinking of a DevOps engineer who is deliberately moving toward solutions architecture: strong separation of concerns, low operational overhead, security-first edge design, and an IaC-first delivery model.
 
 > [!NOTE]
-> The stack is intentionally lightweight and cost-conscious, but the repo should be read as a real architecture exercise rather than a literal $0/month promise. Actual spend depends on traffic, DNS, AWS account settings, and how long the EC2 runner and observability host remain online.
+> The stack is intentionally lightweight and cost-conscious, but the repo should be read as a real architecture exercise rather than a literal $0/month promise. Actual spend depends on traffic, DNS, AWS account settings, and how long the single EC2 host remains online.
 
 ## What This Project Demonstrates
 
 - A static resume frontend delivered through S3 and CloudFront with Origin Access Control, so the bucket itself stays private.
 - A serverless visitor counter built on API Gateway, Python 3.10 Lambda, and DynamoDB On-Demand using atomic `UpdateItem` writes.
 - A self-hosted GitHub Actions runner on EC2, bootstrapped with Ansible and used to execute the deployment pipeline.
-- A K3s-based monitoring control plane running Prometheus and Grafana on a small EC2 instance with swap-enabled memory headroom.
+- A K3s-based monitoring control plane running Prometheus and Grafana on the same EC2 host as the runner, kept stable with swap-enabled memory headroom.
 - A repository structure that separates application code, infrastructure, automation, and monitoring concerns cleanly enough to scale into a multi-environment platform.
 
 ## Architecture Diagram
@@ -21,7 +21,7 @@ This repository shows how a static frontend, a Lambda-based visitor counter, and
 
 ## Grafana Dashboard Snapshot
 
-The dashboard below is a static snapshot from the K3s monitoring host. It is safer to publish than the live endpoint and still shows the operational character of the monitoring plane.
+The dashboard below is a static snapshot from the K3s monitoring stack.
 
 ![Grafana dashboard snapshot](./website/assets/grafana%20dashboard.png)
 
@@ -41,7 +41,7 @@ The deployment workflow runs on a self-hosted EC2 runner. Ansible installs the r
 
 ### Observability plane
 
-The monitoring stack runs locally on a separate EC2 host with K3s. Prometheus is configured with a 15-second scrape interval, a seven-day retention window, and host-network access to scrape Node Exporter on port `9100`. Grafana is exposed via NodePort `30300` for fast access during lab-style validation.
+The monitoring stack runs locally on the same EC2 host as the self-hosted runner, which keeps the whole project within a single running instance. Prometheus is configured with a 15-second scrape interval, a seven-day retention window, and host-network access to scrape Node Exporter on port `9100`. Grafana is exposed via NodePort `30300` for fast access during lab-style validation.
 
 ## Project Structure
 
@@ -58,8 +58,7 @@ cloud-resume-challenge/
 │   ├── lambda_function.py             # Visitor counter Lambda handler
 │   └── lambda_test.py                 # Pytest + Moto coverage
 ├── diagrams/
-│   ├── architecture diagram.png       # Rendered AWS architecture diagram for the README
-│   └── cloud-resume-challenge-architecture.drawio  # Editable AWS architecture diagram
+│   └── architecture diagram.png       # Rendered AWS architecture diagram for the README
 ├── infrastructure/
 │   ├── acm.tf                         # ACM certificate for CloudFront
 │   ├── api_gateway.tf                 # HTTP API and Lambda integration
@@ -109,27 +108,26 @@ This layout is intentional: automation, application code, infrastructure, and mo
 
 ## Cost Analysis
 
-This project can be explained as $0 for the core challenge path when you keep the always-on footprint to the serverless layer and treat the runner and monitoring host as optional lab infrastructure. The table below separates the services that can stay at zero from the parts that create a real AWS bill if you leave them running.
+This project is designed to stay at the AWS free-tier edge: one EC2 instance runs the self-hosted runner and the monitoring stack, the backend is serverless, and the rest of the footprint is intentionally tiny. The only recurring paid AWS item is the Route 53 hosted zone at about $0.50/month.
 
 | Component | Typical monthly cost | Why it can be $0 |
 | --- | --- | --- |
-| Amazon S3 | $0 at challenge scale | Static assets are tiny and storage/requests stay negligible for a resume site. |
-| Amazon CloudFront | $0 at challenge scale | Low traffic and a single static distribution keep usage extremely small. |
+| Amazon S3 | $0 | One private bucket stores the static site and the objects are tiny enough to stay within free-tier style usage. |
+| Amazon CloudFront | $0 | A single distribution fronts the site and the traffic is extremely light. |
 | AWS Certificate Manager | $0 | Public certificates for CloudFront are free. |
-| Amazon API Gateway HTTP API | $0 at challenge scale | The visitor counter generates very few requests. |
-| AWS Lambda | $0 at challenge scale | Short, low-volume invocations stay inside free-tier style usage. |
-| Amazon DynamoDB | $0 at challenge scale | The counter uses a single item with tiny read/write demand. |
-| GitHub Actions | $0 | The workflow runs on GitHub, and the compute is provided by the repo workflow rather than an AWS bill. |
-| Ansible, Terraform, Checkov, Pytest, Moto | $0 | These are local tooling and software costs, not metered cloud services. |
-| Amazon Route 53 hosted zone | $0.50/month | This is the first real fixed AWS cost. If you want a strict $0 baseline, skip the hosted zone and use the CloudFront domain for demos. |
-| EC2 self-hosted runner | Varies | This is only $0 if the instance is stopped or replaced with temporary capacity; otherwise it is a recurring compute cost. |
-| EC2 observability host | Varies | Same as the runner: it is cost-free only when it is not running continuously. |
+| Amazon API Gateway HTTP API | $0 | The resume counter gets only a handful of requests. |
+| AWS Lambda | $0 | Short, low-volume invocations stay inside free-tier style usage. |
+| Amazon DynamoDB | $0 | The table stores a single counter item and uses tiny read/write demand. |
+| Amazon EC2 | $0 within free tier | Only one `t3.micro` instance runs, so the compute stays within the 750-hour monthly free-tier allowance. I also keep it lean with 2 GiB swap and no second EC2 host. |
+| GitHub Actions | $0 | The workflow runs on GitHub, not as a metered AWS service. |
+| Ansible, Terraform, Checkov, Pytest, Moto | $0 | These are local tooling and software costs, not AWS metered services. |
+| Amazon Route 53 hosted zone | $0.50/month | This is the only recurring AWS charge I keep in the cost model because the custom domain is part of the project. |
 
 ### Why the core stack can be $0
 
-The zero-cost claim applies to the core serverless path: S3, CloudFront, ACM, API Gateway, Lambda, and DynamoDB. Those services are intentionally lightweight here and only process a tiny amount of traffic, so the challenge itself can be presented as a $0 AWS service model if you exclude the optional always-on lab hosts and, for a strict interpretation, the Route 53 hosted zone.
+The zero-cost claim applies to the core stack because the application is serverless and the only EC2 compute stays inside the free tier allowance. The current layout keeps the AWS footprint intentionally small: one private S3 bucket, one CloudFront distribution, one HTTP API, one Lambda function, one DynamoDB table, and one `t3.micro` EC2 instance with 2 GiB swap instead of a larger or second host. That means the only explicit recurring AWS spend I keep in the model is the Route 53 hosted zone at about $0.50/month.
 
-In practice, the repo also includes a self-hosted runner and a monitoring host on EC2, which are great for demonstrating a real DevOps workflow but are the parts that introduce a bill. So the clean way to describe the project is: the public resume application is effectively $0-scale, while the lab and observability layer are optional costs outside the core challenge footprint.
+In practice, the self-hosted runner and the monitoring stack share that same EC2 instance, so there is no second EC2 bill. That is the main reason the project can credibly stay within the free-tier envelope while still showing a realistic DevOps workflow.
 
 ## How It Fits Together
 
@@ -139,7 +137,7 @@ In practice, the repo also includes a self-hosted runner and a monitoring host o
 4. The browser sends a `POST` request to the API Gateway visitor counter endpoint.
 5. API Gateway invokes Lambda, which atomically increments DynamoDB and returns the new count.
 6. The GitHub Actions workflow runs from the self-hosted runner and promotes changes with infrastructure, test, and sync steps.
-7. The monitoring host runs K3s, Prometheus, and Grafana so the infrastructure itself remains observable.
+7. The same EC2 host runs K3s, Prometheus, and Grafana so the infrastructure itself remains observable without adding a second instance.
 
 ## Build and Deployment Flow
 
@@ -196,8 +194,6 @@ This repository is not formally certified against any standard. Instead, it is i
 | CNCF / Kubernetes best practices | Declarative infrastructure, namespace isolation, and composable workloads | `monitoring` namespace, ClusterIP for Prometheus, NodePort only for Grafana, and lightweight K3s deployment on a small node |
 
 From a data-sovereignty perspective, this project is designed to keep the data surface area as small as possible: it collects no user profiles, no logins, no payment data, and no long-lived personal identifiers. The only persistent application data is the aggregate resume visit counter.
-
-## Grafana Dashboard Snapshot
 
 ## Author
 
