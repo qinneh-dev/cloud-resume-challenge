@@ -34,64 +34,72 @@ This repository shows how a static frontend, a Lambda-based visitor counter, and
 	'clusterBorder': '#475569',
 	'fontFamily': 'Inter, Segoe UI, system-ui, sans-serif'
 }}}%%
-flowchart TB
-	user((Browser / Visitor))
+flowchart LR
+	viewer((Visitor Browser))
 
-	subgraph edgeTier[Client & Edge Tier]
-		direction TB
-		route53[Route 53 Hosted Zone<br/>omaralqinneh.me]
+	subgraph internet[Public Internet]
+		route53[Route 53<br/>omaralqinneh.me]
+	end
+
+	subgraph edge[AWS Edge and Static Hosting]
+		acm[ACM Certificate<br/>us-east-1]
 		cloudfront[CloudFront Distribution<br/>HTTPS + OAC]
-		s3[S3 Static Website Bucket<br/>Public access blocked + versioning]
+		s3[S3 Private Static Bucket<br/>website/]
 	end
 
-	subgraph serverlessTier[Serverless Backend Tier]
-		direction TB
+	subgraph api[Serverless Visitor Counter]
 		apigw[HTTP API Gateway<br/>POST /visitors]
-		lambdaFn[Python 3.10 Lambda<br/>arm64 runtime]
-		dynamodb[DynamoDB Table<br/>VisitorCount / PAY_PER_REQUEST]
+		lambdaFn[Lambda Function<br/>Python 3.10 · arm64]
+		dynamodb[DynamoDB Table<br/>VisitorCount · PAY_PER_REQUEST]
 	end
 
-	subgraph cicdTier[DevSecOps & CI/CD Tier]
-		direction TB
-		github[GitHub Actions<br/>main branch workflow]
-		ansible[Ansible Playbook<br/>setup-runner.yml]
-		runner[Self-Hosted EC2 Runner<br/>t3.micro + Docker]
-		checks[Pipeline Steps<br/>Checkov • Pytest • Terraform • AWS CLI]
+	subgraph cicd[DevSecOps Pipeline]
+		github[GitHub Actions]
+		ansible[Ansible<br/>setup-runner.yml]
+		runner[EC2 Self-Hosted Runner<br/>t3.micro · Docker]
+		terraform[Terraform]
+		checkov[Checkov]
+		pytest[Pytest + Moto]
+		awscli[AWS CLI]
 	end
 
-	subgraph observabilityTier[K3s Monitoring Control Plane]
-		direction TB
+	subgraph observability[K3s Monitoring Control Plane]
 		ec2obs[EC2 Monitoring Host<br/>t3.micro]
-		swap[2 GiB Swap<br/>memory safety net]
-		k3s[K3s Cluster]
+		swap[2 GiB Swap]
+		k3s[K3s]
 		nodeExporter[Node Exporter<br/>:9100]
-		prometheus[Prometheus<br/>ClusterIP :9090]
-		grafana[Grafana<br/>NodePort :30300]
+		prometheus[Prometheus<br/>:9090]
+		grafana[Grafana<br/>:30300]
 	end
 
-	user -->|DNS lookup + HTTPS| route53
-	route53 -->|Alias record resolution| cloudfront
-	cloudfront -->|HTTPS GET with OAC signed origin access| s3
+	viewer -->|HTTPS| route53
+	route53 -->|Alias to distribution| cloudfront
+	acm -->|TLS certificate| cloudfront
+	cloudfront -->|OAC signed origin access| s3
 
-	user -->|HTTPS POST /visitors| apigw
+	viewer -->|HTTPS POST /visitors| apigw
 	apigw -->|AWS_PROXY integration| lambdaFn
-	lambdaFn -->|Atomic UpdateItem writes| dynamodb
+	lambdaFn -->|Atomic UpdateItem| dynamodb
 
-	github -->|Self-hosted job execution| runner
-	ansible -->|Bootstrap + configuration| runner
-	runner -->|Containerized security scan, tests, deploy, invalidation| checks
+	github -->|workflow jobs| runner
+	ansible -->|bootstrap| runner
+	runner --> checkov
+	runner --> pytest
+	runner --> terraform
+	runner --> awscli
 
-	ec2obs -->|Runs on| swap
-	ec2obs -->|Hosts| k3s
-	k3s -->|Scrapes metrics over localhost:9100| nodeExporter
-	nodeExporter -->|Internal cluster metrics| prometheus
-	prometheus -->|Internal DNS / ClusterIP service| grafana
-	user -->|HTTP NodePort 30300| grafana
+	ec2obs --> swap
+	ec2obs --> k3s
+	k3s -->|scrape localhost:9100| nodeExporter
+	nodeExporter -->|metrics| prometheus
+	prometheus -->|ClusterIP service| grafana
+	viewer -->|HTTP NodePort 30300| grafana
 
-	style edgeTier fill:#0b1220,stroke:#38bdf8,stroke-width:1px,color:#f8fafc
-	style serverlessTier fill:#111827,stroke:#22c55e,stroke-width:1px,color:#f8fafc
-	style cicdTier fill:#121826,stroke:#f59e0b,stroke-width:1px,color:#f8fafc
-	style observabilityTier fill:#0f1b2d,stroke:#a78bfa,stroke-width:1px,color:#f8fafc
+	style internet fill:#0b1220,stroke:#38bdf8,stroke-width:1px,color:#f8fafc
+	style edge fill:#111827,stroke:#38bdf8,stroke-width:1px,color:#f8fafc
+	style api fill:#111827,stroke:#22c55e,stroke-width:1px,color:#f8fafc
+	style cicd fill:#111827,stroke:#f59e0b,stroke-width:1px,color:#f8fafc
+	style observability fill:#0f1b2d,stroke:#a78bfa,stroke-width:1px,color:#f8fafc
 ```
 
 ## Architecture Notes
@@ -112,7 +120,7 @@ The deployment workflow runs on a self-hosted EC2 runner. Ansible installs the r
 
 The monitoring stack runs locally on a separate EC2 host with K3s. Prometheus is configured with a 15-second scrape interval, a seven-day retention window, and host-network access to scrape Node Exporter on port `9100`. Grafana is exposed via NodePort `30300` for fast access during lab-style validation.
 
-## Repository Map
+## Project Structure
 
 | Path | Purpose |
 | --- | --- |
@@ -121,7 +129,15 @@ The monitoring stack runs locally on a separate EC2 host with K3s. Prometheus is
 | `ansible/setup-runner.yml` | Runner bootstrap playbook; installs packages, Docker, swap, and the runner workspace. |
 | `backend/lambda_function.py` | Visitor counter Lambda handler with atomic DynamoDB updates and CORS headers. |
 | `backend/lambda_test.py` | Moto-backed pytest suite covering happy path, upsert behavior, and failure propagation. |
-| `infrastructure/*.tf` | Terraform for S3, CloudFront, Route 53, ACM, DynamoDB, API Gateway, Lambda, and the EC2 runner. |
+| `infrastructure/acm.tf` | ACM certificate for the CloudFront alias domain. |
+| `infrastructure/api_gateway.tf` | HTTP API for the visitor counter route and Lambda integration. |
+| `infrastructure/cloudfront.tf` | CloudFront distribution, OAC, and S3 bucket policy. |
+| `infrastructure/database.tf` | DynamoDB visitor counter table and seed item. |
+| `infrastructure/lambda.tf` | Lambda package, IAM role, policy, and function definition. |
+| `infrastructure/provider.tf` | AWS provider, region config, and S3 backend. |
+| `infrastructure/route53.tf` | Hosted zone and apex alias record. |
+| `infrastructure/runner.tf` | EC2 self-hosted runner, key pair, security group, and outputs. |
+| `infrastructure/s3.tf` | Private static website bucket and public access block. |
 | `k8s/00-namespace.yaml` | Monitoring namespace. |
 | `k8s/01-prometheus.yaml` | Prometheus deployment, service, and configuration. |
 | `k8s/02-grafana.yaml` | Grafana deployment and NodePort service. |
@@ -129,7 +145,30 @@ The monitoring stack runs locally on a separate EC2 host with K3s. Prometheus is
 | `website/script.js` | Visitor counter client logic. |
 | `website/styles.css` | Dark, responsive visual treatment for the portfolio page. |
 | `website/assets/pfp.png` | Profile image used by the resume page. |
+| `website/assets/grafana dashboard.png` | Static Grafana dashboard snapshot used in the README. |
 | `.gitignore` | Excludes Terraform state, keys, Python caches, and local IDE artifacts. |
+
+## Services Used
+
+| Layer | Services |
+| --- | --- |
+| Edge and delivery | Amazon Route 53, Amazon CloudFront, AWS Certificate Manager, Amazon S3 |
+| Serverless backend | Amazon API Gateway HTTP API, AWS Lambda, Amazon DynamoDB |
+| DevSecOps | GitHub Actions, Ansible, Terraform, AWS CLI, Checkov, Pytest, Moto, Docker |
+| Monitoring | Amazon EC2, K3s, Prometheus, Grafana, Node Exporter |
+
+## Tech Stack
+
+| Category | Stack |
+| --- | --- |
+| Frontend | HTML5, CSS3, vanilla JavaScript |
+| Backend runtime | Python 3.10 on AWS Lambda |
+| Infrastructure as Code | Terraform |
+| Configuration management | Ansible |
+| Containers and orchestration | Docker, K3s |
+| Testing | Pytest, Moto |
+| Security and linting | Checkov |
+| Cloud region usage | `eu-central-1` for primary infrastructure, `us-east-1` for ACM |
 
 ## How It Fits Together
 
@@ -183,11 +222,6 @@ The GitHub Actions workflow pushes the website to S3 and then invalidates the Cl
 - `terraform` is pinned through the lock file in `infrastructure/` so provider behavior stays reproducible.
 - The Lambda code uses a single atomic write path instead of separate read and write calls, which is the right tradeoff for a visitor counter.
 
-## Security and Operations Posture
-
-> [!IMPORTANT]
-> A few parts of the repo are intentionally lab-friendly rather than production-hardened. The Grafana manifest uses a default admin password, the runner security group is permissive enough for setup, and the DynamoDB table currently prioritizes simplicity over advanced data retention controls. Those are all reasonable for a portfolio project, but they should be tightened before any real customer-facing deployment.
-
 ## Compliance, Privacy, and Data Sovereignty
 
 This repository is not formally certified against any standard. Instead, it is intentionally built to align with the control themes below so the implementation reads like an architecture that can be defended in a security review.
@@ -207,32 +241,6 @@ From a data-sovereignty perspective, this project is designed to keep the data s
 The dashboard below is a static snapshot from the K3s monitoring host. It is safer to publish than the live endpoint and still shows the operational character of the monitoring plane.
 
 ![Grafana dashboard snapshot](./website/assets/grafana%20dashboard.png)
-
-### Snapshot Highlights
-
-The attached dashboard shows the monitoring host under sustained but acceptable lab load, with the following visible values:
-
-| Metric | Value |
-| --- | --- |
-| CPU Busy | 20.7% |
-| System Load | 60.5% |
-| RAM Used | 82.0% |
-| Swap Used | 32.0% |
-| Root FS Used | 58.9% |
-| Uptime | 18.5 hours |
-
-This is useful in the README because it tells the story behind the K3s control plane: the stack is intentionally small, memory pressure is real, and the 2 GiB swap configuration is doing meaningful work.
-
-## Roadmap
-
-This repo already reads like an engineering portfolio, but the natural next step is to mature it into a more complete solutions-architecture showcase. The most meaningful upgrades would be:
-
-- Replace demo credentials with a proper secrets-management strategy.
-- Narrow the runner and monitoring ingress rules to known source ranges or VPN-only access.
-- Add CloudWatch alarms, dashboards, and alert routing for the Lambda, API Gateway, and EC2 layers.
-- Enable DynamoDB point-in-time recovery if the counter data ever becomes more than a demo metric.
-- Introduce multi-environment promotion so `dev`, `stage`, and `prod` can evolve cleanly.
-- Add a formal runbook for failover, rollback, and certificate renewal workflows.
 
 ## Author
 
