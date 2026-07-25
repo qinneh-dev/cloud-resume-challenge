@@ -36,7 +36,7 @@ jobs:
         run: |
           docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/workspace -w /workspace python:3.10-slim bash -c "pip install --quiet pytest boto3 moto && python3 -m pytest backend/lambda_test.py"
 
-  # deploy stage via containers
+ # deploy stage via containers
   deploy:
     runs-on: self-hosted
     needs: [security, testing]
@@ -50,17 +50,17 @@ jobs:
 
       - name: Terraform apply in container
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/infrastructure:/workspace -w /workspace \
+          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/infrastructure \
             -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
             hashicorp/terraform:latest init
             
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/infrastructure:/workspace -w /workspace \
+          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/infrastructure \
             -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
             hashicorp/terraform:latest apply -auto-approve
 
       - name: Sync s3 via aws cli container
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd)/website:/workspace -w /workspace \
+          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace/website \
             -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION \
             amazon/aws-cli s3 sync . s3://omaralqinneh-resume-bucket-eu --delete
 
