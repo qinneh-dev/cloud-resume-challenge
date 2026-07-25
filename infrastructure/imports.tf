@@ -27,3 +27,7 @@ import {
   to = aws_cloudfront_origin_access_control.oac
   id = "E1D3F8GFLRIM17"
 }
+import {
+  to = aws_instance.github_runner
+  id = "i-00f942bbf7593a0a7"
+}

@@ -19,11 +19,10 @@ data "aws_ami" "ubuntu" {
     values = ["hvm"]
   }
 }
-
-# security group
+#security group
 resource "aws_security_group" "runner_sg" {
   name        = "github-runner-sg"
-  description = "Security group for GitHub Actions self-hosted runner" 
+  description = "Allow SSH and outbound internet" 
 
   ingress {
     description = "Allow inbound SSH access from anywhere"           
