@@ -1,18 +1,17 @@
 name: DevSecOps Pipeline
 
-# trigger
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# geo-fence data sovereignty
 env:
   AWS_DEFAULT_REGION: eu-central-1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # security scan 
+  # security scan non blocking
   security:
     runs-on: self-hosted
     steps:
