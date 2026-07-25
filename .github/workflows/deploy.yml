@@ -34,7 +34,7 @@ jobs:
 
       - name: Run pytest in python container
         run: |
-          docker run --rm --user $(id -u):$(id -g) -v $(pwd):/workspace -w /workspace python:3.10-slim bash -c "pip install --quiet pytest boto3 moto && python3 -m pytest backend/lambda_test.py"
+          docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/workspace -w /workspace python:3.10-slim bash -c "pip install --quiet pytest boto3 moto && python3 -m pytest backend/lambda_test.py"
 
   # deploy stage via containers
   deploy:
