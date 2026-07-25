@@ -1,7 +1,7 @@
 # ssh key pair from local mac
 resource "aws_key_pair" "runner_key" {
   key_name   = "runner-key"
-  public_key = file("~/.ssh/runner-key.pub")
+  public_key = file("${path.module}/runner-key.pub")
 }
 
 # ubuntu ami
@@ -23,18 +23,18 @@ data "aws_ami" "ubuntu" {
 # security group
 resource "aws_security_group" "runner_sg" {
   name        = "github-runner-sg"
-  description = "Allow SSH and outbound internet"
+  description = "Security group for GitHub Actions self-hosted runner" 
 
-  # ssh access
   ingress {
+    description = "Allow inbound SSH access from anywhere"           
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # outbound traffic
   egress {
+    description = "Allow unrestricted outbound internet access"     
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
