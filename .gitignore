@@ -12,6 +12,6 @@ __pycache__/
 .pytest_cache/
 **/.pytest_cache/
 .coverage
-DS_Store
+.DS_Store
 .vscode/
 *.swp

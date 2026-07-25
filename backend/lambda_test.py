@@ -25,7 +25,7 @@ def dynamodb_setup():
         
     # Create fake table 
         table = dynamodb.create_table(
-            TableName='VisitorCount_TF',
+            TableName='VisitorCount',
             KeySchema=[{'AttributeName': 'id', 'KeyType': 'HASH'}],
             AttributeDefinitions=[{'AttributeName': 'id', 'AttributeType': 'S'}],
             BillingMode='PAY_PER_REQUEST'
