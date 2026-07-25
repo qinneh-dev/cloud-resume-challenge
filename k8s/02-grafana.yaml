@@ -21,7 +21,7 @@ spec:
         env: # environment variables to pass into container on boot
         - name: GF_SECURITY_ADMIN_PASSWORD
           value: "admin" # username is admin
-
+---
 apiVersion: v1
 kind: Service
 metadata:
