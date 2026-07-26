@@ -184,6 +184,21 @@ The GitHub Actions workflow pushes the website to S3 and then invalidates the Cl
 - `terraform` is pinned through the lock file in `infrastructure/` so provider behavior stays reproducible.
 - The Lambda code uses a single atomic write path instead of separate read and write calls, which is the right tradeoff for a visitor counter.
 
+## Test Suite
+
+The backend test suite in [backend/lambda_test.py](backend/lambda_test.py) uses `pytest` and `moto` to exercise the Lambda handler against a mocked DynamoDB table named `VisitorCount`.
+
+It verifies that the function:
+
+- returns HTTP `200` and the expected CORS header,
+- increments the visitor counter by exactly one on each call,
+- returns a JSON response that contains `views` as an integer,
+- updates the underlying DynamoDB item correctly,
+- recreates the counter if the item is missing, and
+- raises a `ClientError` if the table itself is unavailable.
+
+This keeps the visitor counter logic testable without any live AWS dependency and proves that the atomic `UpdateItem` flow behaves as intended.
+
 ## Compliance, Privacy, and Data Sovereignty
 
 This repository is not formally certified against any standard. Instead, it is intentionally built to align with the control themes below so the implementation reads like an architecture that can be defended in a security review.
